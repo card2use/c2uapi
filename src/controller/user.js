@@ -1,41 +1,79 @@
-//var mydb = require('../db').get;
-var mydb = require('../activerecord');
-var constaint = require('../constraint');
-var ObjectID = require('mongodb').ObjectID; 
+var mongoose = require('mongoose');
 var common = require('../common');
+const UserModel = require("../model/usermodel");
+const CounterModel = require("../model/countermodel");
 
 module.exports = {
 	postUser: function(req,res){
 		common.myLogger(req,res);
 
-		if(typeof req.body.name=='undefined' || typeof req.body.email=='undefined' || typeof req.body.phone=='undefined' || typeof req.body.sex=='undefined' || typeof req.body.age=='undefined' || typeof req.body.access_deviceid=='undefined'){
-			return res.status(400).json({'status':400,'message':'Please provide all the required field'});
-		}
-		var datetime = new Date();
-		var recordSet = mydb.collection("uniqueUserKey").find().sort({uniquekey:-1}).limit(1).toArray(function(err,response){
-    		if (err) throw err;
-    		var newKey = response[0].uniquekey+parseInt(1);
-    		var uniqueKeyObj = { uniquekey: newKey, added_on: new Date() };
-    		mydb.collection("uniqueUserKey").insertOne(uniqueKeyObj, function(err, response) {
-				if (err) throw err;
-				var userObj = { name: req.body.name, email:req.body.email,phone: req.body.phone,sex:req.body.sex,age:req.body.age,customerid: parseInt(newKey), access_deviceid : req.body.access_deviceid, added_on: new Date() }
-				mydb.collection("usersList").insertOne(userObj, function(err, response) {
-					if (err) throw err;
-					console.log("1 document inserted in userList");
-					return res.json({'status':200,'message':'Added Successfully','dataList':userObj });
-				 });
-			 });
-
-    	})
+		CounterModel.findOne().sort({ '_id': -1 }).limit(1).exec().then( response=>{
+			if(response && Object.keys(response).length > 1 ){
+				CounterModel.findByIdAndUpdate({ _id:response._id },
+					{
+					 $inc : { uniqueidentifier: 1 },
+					 $set: { added_on: new Date() }
+					}).exec()
+					.then( response=>{
+						var UserData = new UserModel({ 
+							_id : mongoose.Types.ObjectId(),
+							name: req.body.name, 
+							email:req.body.email,
+							phone: req.body.phone,
+							sex:req.body.sex,
+							age:req.body.age,
+							userid: parseInt(response.uniqueidentifier),
+							access_deviceid : req.body.access_deviceid, 
+							country : req.body.country,
+							city : req.body.city,
+							geo : [ req.body.lat, req.body.lng ]
+						});
+						UserData.save().then( response=>{
+							return res.status(200).json({'status':200,'message':'Added Successfully','dataList':response });
+						}).catch( error=>{
+							return res.status(500).json({'status':500,'message':'Something went wrong','error':error });
+						})
+					}).catch( error=>{
+						return res.status(500).json({'status':500,'message':'Something went wrong','error':error });
+					})
+			}else{
+				var GenerateKey = new CounterModel({
+					_id : mongoose.Types.ObjectId(),
+					uniqueidentifier : 12345,
+					added_on : new Date()
+				});
+				GenerateKey.save().then(response=>{
+					var UserData = new UserModel({ 
+						_id : mongoose.Types.ObjectId(),
+						name: req.body.name, 
+						email:req.body.email,
+						phone: req.body.phone,
+						sex:req.body.sex,
+						age:req.body.age,
+						userid: parseInt(response.uniqueidentifier),
+						access_deviceid : req.body.access_deviceid, 
+						country : req.body.country,
+						city : req.body.city,
+						accessip : req.body.accessip,
+						geo : [ req.body.lat, req.body.lng ]
+					});
+					UserData.save().then( response=>{
+						return res.status(200).json({'status':200,'message':'Added Successfully','dataList':response });
+					}).catch( error=>{
+						return res.status(500).json({'status':500,'message':'Something went wrong','error':error });
+					})
+				}).catch( error=>{
+					return res.status(500).json({'status':500,'message':'Something went wrong','error':error });
+				})
+			}
+		}).catch( error=>{
+			return res.status(500).json({'status':500,'message':'Something went wrong','error':error,"last":"last" });
+		})
 	},
 
 	updateUser : function(req,res){
-		if(typeof req.params.key=='undefined' || req.params.key != global.key ){
-			return res.status(401).json({'status':401,'message':'Unauthorized'});
-		}
-		if(req.params.id==''){
-			return res.status(400).json({'status':400,'message':'Please provide all the required field'});
-		}
+		common.myLogger(req,res);
+	
 		var tempData = {};
 		if(typeof req.body.name != 'undefined'){
 			tempData['name'] =  req.body.name;
@@ -52,34 +90,27 @@ module.exports = {
 		if(typeof req.body.age != 'undefined'){
 			tempData['age'] =  req.body.age;
 		}
-		tempData['last_modified'] = new Date();
-		tempData = { $set: tempData };
-		console.log(tempData);
-		var condition = { '_id': ObjectID(req.params.id) };
-		mydb.collection("usersList").updateOne(condition, tempData, function(err, response) {
-			if (err) throw err;
-			console.log("1 document updated in userlist ");
-			return res.json({'status':200,'message':'Updated Successfully','dataList':tempData});
-		});
+		tempData['updated_on'] = new Date();
+		//tempData = { $set: tempData };
+
+		UserModel.findByIdAndUpdate(req.params.id,tempData,{ new: true }).exec().then( response=>{
+			if(response){
+				return res.json({'status':200,'message':'Updated Successfully','dataList':response});
+			}else{
+				return res.status(404).json({'status':404,'message':'No user found','dataList':{}});
+			}
+		}).catch( error=>{
+			return res.status(500).json({'status':500,'message':'Something went wrong','error':error });
+		})
 	},
 
 	doLogin : function(req,res){
 		common.myLogger(req,res);
-		
-		if(typeof req.body.customerid=='undefined' || req.body.customerid==''){
-			return res.json({'status':400,'message':'Please provide all the required field'});
-		}
 
-		var query = { customerid: parseInt(req.body.customerid) };
-		console.log(query);
-		mydb.collection("usersList").find(query).toArray(function(err, response) {
-			if (err) throw err;
-			console.log("select users for login");
-			if(response.length > 0){
-				return res.json({'status':200,'message':'success',dataList:response});
-			}else{
-				return res.json({'status':200,'message':'error',dataList:{}});
-			}
-		});
+		UserModel.findOne({'userid':req.body.customerid}).select('-__v').exec().then( response=>{
+			return res.status(200).json({'status':200,'message':'success','dataList':response});
+		}).catch( error=>{
+			return res.status(500).json({'status':500,'message':'Something went wrong','error':error });
+		})
 	}
 }
