@@ -39,6 +39,7 @@ module.exports = function(app) {
     var card = require("./controller/card");
     var user = require("./controller/user");
     var offer = require("./controller/offers");
+    var review = require("./controller/review");
     app
 
     //    .get("/getMyCards/:key/:id",card.myCard)
@@ -58,6 +59,8 @@ module.exports = function(app) {
        .post("/postLogindetails/:key",user.doLogin)
        .put("/putUser/:key/:id",user.updateUser)
        .post("/offer/:key",offer.addoffer)
+       .post("/review/",review.addReview)
+       .post("/review/getReview/",review.getReview)
        .get('*', function(req, res){
 		   res.status(404).send("Sorry can't find that!")
 		});

@@ -24,6 +24,10 @@ var OfferModelSchema = new Schema({
         type: [Number],
         index: '2d'
     },
+    locationpoint: {
+        type: { type: String, default: "Point"},
+        coordinates: [Number]
+    },
     location: String,
     valid_from: {
         type : Date,
@@ -50,5 +54,7 @@ var OfferModelSchema = new Schema({
         default : Date.now
     }
 })
+
+OfferModelSchema.index({ locationpoint: "2dsphere" });
 
 module.exports = mongoose.model('Offers', OfferModelSchema);
