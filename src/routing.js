@@ -40,6 +40,7 @@ module.exports = function(app) {
     var user = require("./controller/user");
     var offer = require("./controller/offers");
     var review = require("./controller/review");
+    var common = require("./controller/commonuse")
     app
 
     //    .get("/getMyCards/:key/:id",card.myCard)
@@ -59,8 +60,13 @@ module.exports = function(app) {
        .post("/postLogindetails/:key",user.doLogin)
        .put("/putUser/:key/:id",user.updateUser)
        .post("/offer/:key",offer.addoffer)
-       .post("/review/",review.addReview)
-       .post("/review/getReview/",review.getReview)
+       .post("/getoffer/:key",offer.getoffer)
+       .post("/review/:key",review.addReview)
+       .get("/review/getReview/:key",review.getReview)
+       .post("/common/:key",common.postContactReq)
+       .get("/common/:key",common.getContactReqList)
+       .post("/common/cmscontentpost/:key",common.cmscontentpost)
+       .post("/common/cmscontentget/:key",common.cmscontentget)
        .get('*', function(req, res){
 		   res.status(404).send("Sorry can't find that!")
 		});

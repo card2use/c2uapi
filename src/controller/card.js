@@ -55,10 +55,14 @@ module.exports = {
 			tempData['card_network'] =  req.body.card_network;
 		}
 
+		if(typeof req.body.card_color != 'undefined'){
+			tempData['card_color'] =  req.body.card_color;
+		}
+
 		tempData['updated_on'] = new Date();
 		cardObj = { $set: tempData };
 
-		CardModel.findByIdAndUpdate(req.body.id,cardObj).then( response=>{
+		CardModel.findByIdAndUpdate(req.body.id,cardObj,{ new: true }).then( response=>{
 			return res.status(200).json({'status':200,'message':'Updated Successfully','dataList':response });
 		}).catch( error=>{
 			return res.status(500).json({'status':500,'message':'Something went wrong','error':error });
@@ -80,6 +84,10 @@ module.exports = {
 
 		if (req.fileValidationError) {
 			return res.status(500).json({'status':500,'message':'Something went wrong','error':req.fileValidationError });
+		}
+		if(typeof req.file == 'undefined'){
+			req.file={};
+			req.file['filename']='';
 		}
 		var BankData = new BankModel({
 			_id : mongoose.Types.ObjectId(),

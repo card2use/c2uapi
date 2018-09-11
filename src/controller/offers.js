@@ -1,7 +1,9 @@
 var Offer = require('../model/offermodel');
+const CardModel = require("../model/cardmodel");
 var common = require('../common');
 var mongoose = require('mongoose');
 //mongoose.set('debug', true);
+var crdLists=[];
 module.exports = {
 	addoffer: function(req,res){
 		common.myLogger(req,res);
@@ -40,7 +42,26 @@ module.exports = {
 
 	getoffer: function(req, res){
 		common.myLogger(req,res);
-		var query = {};
+		var query = {},newArray=[],promises=[];
+		if(req.body.userid){
+			promises.push(
+				new Promise(function(resolve, reject) {
+					CardModel.find({ added_by:req.body.userid }).select('type , card_network').exec(function(query,result){
+						var promiseInside=[];
+						for(i=0;i<=result.length;i++){
+							if(result[i]){
+								newArray.push((result[i].type).toString());
+								promiseInside.push(result[i]);
+							}
+						}
+						Promise.all(promiseInside).then( succFn=>{
+							resolve({'cardList':newArray});
+						})
+					})
+				})
+			);
+		}
+		
 		if( typeof req.body.lng != 'undefined' &&  typeof req.body.lat != 'undefined' && req.body.lng!='' && req.body.lat!=''){
 			query['locationpoint'] = { 
 				'$near':{ 
@@ -51,22 +72,32 @@ module.exports = {
 					}
 				}
 			};
+			promises.push({'locationpoint':req.body.lng+'-'+req.body.lat});
 		}
-		if( req.body.bank_name ){
-			query['bank_name'] = new RegExp(req.body.bank_name, "i");
+		
+		if( typeof req.body.bank_name !='undefined' ){
+			query['bank_name'] = req.body.bank_name;
+			promises.push({'bank_name':req.body.bank_name});
 		}
-		if( req.body.card_type ){
-			query['card_type'] = new RegExp(req.body.card_type, "i");
-		}
-
-		query['valid_from'] = { $lte: new Date() };
-		query['valid_till'] = { $gte: new Date() };
-
-		Offer.find(query).exec().then( response=>{
-			return res.status(200).json({'status':200,'message':'success','dataList':response});
+		
+		Promise.all(promises).then(dataAll=>{
+			if( req.body.card_type && newArray.length<=0){
+				query['card_type'] = req.body.card_type;
+			}
+			if(newArray.length > 0){
+				query['card_type'] = {
+					'$in':newArray
+				};
+			}
+						
+			Offer.find(query).exec(function(query,response){
+				
+				return res.status(200).json({'status':200,'message':'success','dataList':response});
+			})
 		}).catch( error=>{
 			return res.status(500).json({'status':500,'message':'error','error':error });
 		})
+				
 	}
 
 }

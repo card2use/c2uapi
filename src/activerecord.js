@@ -8,7 +8,7 @@ var state = {
 function connectDatabase() {
     if (!db) {
         //console.log('here');
-        mongoose.connect('mongodb://rootUser:SOh3TbYhx8ypJPxmt1oOfLKU@18.213.100.94:27017/c2u_database', { useNewUrlParser: true });
+        mongoose.connect('mongodb://card2use_rootuser:SOh3TbYhx8ypJPxmt1oOfLKU@18.213.100.94:27017/c2u_database', { useNewUrlParser: true });
         db = mongoose.connection;
         state.db = db;  
         db.on('error', console.error.bind(console, 'MongoDB connection error:'));

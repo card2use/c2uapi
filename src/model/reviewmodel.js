@@ -11,6 +11,11 @@ var ReviewModelSchema = new Schema({
     },
     comments : String,
     stargiven : Number,
+    userinterface : Number,
+    easeofuse : Number,
+    rewardsaccuracy : Number,
+    locationaccuracy : Number,
+    usefulness : Number,
     added_on : {
         type : Date,
         default : Date.now
